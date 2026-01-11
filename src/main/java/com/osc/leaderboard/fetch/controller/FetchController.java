@@ -1,20 +1,19 @@
 package com.osc.leaderboard.fetch.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.osc.leaderboard.fetch.dtos.FetchDTO;
-import com.osc.leaderboard.fetch.service.FetchService;
-
 import java.time.Instant;
 import java.util.List;
 
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.osc.leaderboard.fetch.dtos.FetchDTO;
+import com.osc.leaderboard.fetch.service.FetchService;
 
 @RestController
 @RequestMapping("/fetch")
@@ -39,14 +38,14 @@ public class FetchController {
         }
 
         if (start == null) {
-            start = Instant.MIN;
+            return new ResponseEntity<>(fetchService.getFetchesByDateBefore(end), HttpStatus.OK);
         }
 
         if (end == null) {
-            end = Instant.MAX;
+            return new ResponseEntity<>(fetchService.getFetchesByDateAfter(start), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(fetchService.getFetchesByDate(start, end), HttpStatus.OK);
+        return new ResponseEntity<>(fetchService.getFetchesByDateBetween(start, end), HttpStatus.OK);
     }
 
 }

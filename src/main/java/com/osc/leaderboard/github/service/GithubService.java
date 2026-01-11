@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.core.env.Environment;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.osc.leaderboard.fetch.model.Fetch;
 import com.osc.leaderboard.github.dtos.PullRequestResultDTO;
 import com.osc.leaderboard.github.dtos.PullRequestSearchDTO;
 
@@ -22,7 +25,8 @@ import com.osc.leaderboard.github.dtos.PullRequestSearchDTO;
 public class GithubService {
 
     private static final List<String> PULL_REQUEST_SEARCH_PATH = new ArrayList<>(
-            Arrays.asList("GithubSearchPullRequests1", "GithubSearchPullRequests2", "GithubSearchPullRequests3"));
+            Arrays.asList("GithubSearchPullRequests1.json", "GithubSearchPullRequests2.json",
+                    "GithubSearchPullRequests3.json", "GithubSearchPullRequests4.json"));
 
     private final ObjectMapper objectMapper;
 
@@ -33,14 +37,30 @@ public class GithubService {
         this.env = env;
     }
 
-    private JsonNode mockPullRequestSearchRequest(Integer page, Instant earliestDate) throws IOException {
-        ClassPathResource resource = new ClassPathResource(PULL_REQUEST_SEARCH_PATH.get(page));
+    private JsonNode mockPullRequestSearchRequest(Integer page, Instant earliestDate, Optional<Fetch> laterThan)
+            throws IOException {
+        // Precondition
+        if (page == 0 || page > PULL_REQUEST_SEARCH_PATH.size()) {
+            throw new RuntimeException("Page index is invalid");
+        }
+
+        // Precondition
+        if (laterThan.isPresent()) {
+            // Return empty response for testing purposes and adjust count accordingly
+            ClassPathResource resource = new ClassPathResource(PULL_REQUEST_SEARCH_PATH.get(3));
+            File file = resource.getFile();
+            JsonNode json = objectMapper.readTree(file);
+            ObjectNode objectNode = ((ObjectNode) json).put("total_count", 0);
+            return (JsonNode) objectNode;
+        }
+
+        ClassPathResource resource = new ClassPathResource(PULL_REQUEST_SEARCH_PATH.get(page - 1));
         File file = resource.getFile();
         JsonNode json = objectMapper.readTree(file);
         return json;
     }
 
-    private JsonNode pullRequestSearchRequest(Integer page, Instant earliestDate) {
+    private JsonNode pullRequestSearchRequest(Integer page, Instant earliestDate, Optional<Fetch> laterThan) {
         throw new NotImplementedException();
     }
 
@@ -53,7 +73,7 @@ public class GithubService {
         for (JsonNode item : itemsNode) {
             JsonNode user = item.get("user");
             String username = user.get("login").asText();
-            String avatarUrl = item.get("avatar_url").asText();
+            String avatarUrl = user.get("avatar_url").asText();
 
             String repoUrl = item.get("repository_url").asText();
             String repoName = repoUrl.substring(repoUrl.lastIndexOf("/") + 1);
@@ -67,29 +87,35 @@ public class GithubService {
         return new PullRequestSearchDTO(totalCount, pullRequestResults, earliestDate);
     }
 
-    private Integer processPullRequestSearch(PullRequestSearchDTO pullRequestSearchDTO) {
+    private void processPullRequestSearch(PullRequestSearchDTO pullRequestSearchDTO) {
         Integer totalCount = pullRequestSearchDTO.totalCount();
 
         // TODO: Call external services to populate database
-
-        return totalCount;
     }
 
-    public Integer fetchPullRequests() {
+    private JsonNode callPullRequestSearchRequest(Integer currPage, Instant earliestDate,
+            Optional<Fetch> laterThan) {
         String target = env.getProperty("TARGET");
         JsonNode currJson;
-        Integer currPage = 1;
-        Instant earliestDate = Instant.now().plus(1, ChronoUnit.DAYS);
-
         if (target == "prod") {
-            currJson = pullRequestSearchRequest(currPage, earliestDate);
+            currJson = pullRequestSearchRequest(currPage, earliestDate, laterThan);
         } else {
             try {
-                currJson = mockPullRequestSearchRequest(currPage, earliestDate);
+                currJson = mockPullRequestSearchRequest(currPage, earliestDate, laterThan);
             } catch (IOException e) {
                 throw new RuntimeException(e.getMessage());
             }
         }
+
+        return currJson;
+    }
+
+    public Integer fetchPullRequests(Optional<Fetch> laterThan) {
+        JsonNode currJson;
+        Integer currPage = 1;
+        Instant earliestDate = Instant.now().plus(1, ChronoUnit.DAYS);
+
+        currJson = callPullRequestSearchRequest(currPage, earliestDate, laterThan);
 
         PullRequestSearchDTO pullRequestSearchDTO = processPullRequestSearchJson(currJson);
         Integer totalCount = pullRequestSearchDTO.totalCount();
@@ -99,21 +125,22 @@ public class GithubService {
             for (int i = 2; i < totalPages + 1; ++i) {
                 earliestDate = pullRequestSearchDTO.earliestDate();
 
-                if (target == "prod") {
-                    currJson = pullRequestSearchRequest(i, earliestDate);
-                } else {
-                    try {
-                        currJson = mockPullRequestSearchRequest(i, earliestDate);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e.getMessage());
-                    }
-                }
+                currJson = callPullRequestSearchRequest(currPage, earliestDate, laterThan);
 
                 pullRequestSearchDTO = processPullRequestSearchJson(currJson);
                 totalCount = pullRequestSearchDTO.totalCount();
 
-                if (i == 3 && target != "prod")
+                if (i == 4 && env.getProperty("TARGET") != "prod")
                     break;
+
+                // // So we don't spam the Github API and get clapped
+                // // We may not need this yet:
+                // https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#about-secondary-rate-limits
+                // try {
+                // TimeUnit.SECONDS.sleep(.5);
+                // } catch (InterruptedException ie) {
+                // Thread.currentThread().interrupt();
+                // }
             }
         }
 

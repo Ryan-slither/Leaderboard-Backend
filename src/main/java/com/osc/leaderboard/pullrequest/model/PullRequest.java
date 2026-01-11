@@ -1,8 +1,6 @@
 package com.osc.leaderboard.pullrequest.model;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -15,20 +13,18 @@ public class PullRequest {
 
     private Instant mergedAt;
 
-    // Many to One for Developers
-    private List<String> developerIds = new ArrayList<>();
+    private String developerId;
 
-    // Many to One for Repos
-    private List<String> repoIds = new ArrayList<>();
+    private String repoId;
 
     public PullRequest() {
     }
 
-    public PullRequest(String id, Instant mergedAt, List<String> developerIds, List<String> repoIds) {
+    public PullRequest(String id, Instant mergedAt, String developerId, String repoId) {
         Id = id;
         this.mergedAt = mergedAt;
-        this.developerIds = developerIds;
-        this.repoIds = repoIds;
+        this.developerId = developerId;
+        this.repoId = repoId;
     }
 
     public String getId() {
@@ -47,26 +43,26 @@ public class PullRequest {
         this.mergedAt = mergedAt;
     }
 
-    public List<String> getDeveloperIds() {
-        return developerIds;
+    public String getDeveloperId() {
+        return developerId;
     }
 
-    public void setDeveloperIds(List<String> developerIds) {
-        this.developerIds = developerIds;
+    public void setDeveloperId(String developerId) {
+        this.developerId = developerId;
     }
 
-    public List<String> getRepoIds() {
-        return repoIds;
+    public String getRepoId() {
+        return repoId;
     }
 
-    public void setRepoIds(List<String> repoIds) {
-        this.repoIds = repoIds;
+    public void setRepoId(String repoId) {
+        this.repoId = repoId;
     }
 
     @Override
     public String toString() {
-        return "PullRequest [Id=" + Id + ", mergedAt=" + mergedAt + ", developerIds=" + developerIds + ", repoIds="
-                + repoIds + "]";
+        return "PullRequest [Id=" + Id + ", mergedAt=" + mergedAt + ", developerId=" + developerId + ", repoId="
+                + repoId + "]";
     }
 
 }

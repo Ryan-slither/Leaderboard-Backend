@@ -15,11 +15,10 @@ services:
     build: 
       context: ./
       target: test
-    restart: on-failure
     env_file: ./.env
     ports:
       - $SPRING_LOCAL_PORT:$SPRING_DOCKER_PORT
     environment:
       SPRING_APPLICATION_JSON: '{
-          "spring.mongodb.uri" : "mongodb://$MONGODB_USER:$MONGODB_PASSWORD@mongo_db:$MONGODB_DOCKER_PORT/$MONGODB_DATABASE_TEST?authSource=admin"
+          "spring.mongodb.uri" : "mongodb://$MONGODB_USER:$MONGODB_PASSWORD@mongo_db_test:$MONGODB_DOCKER_PORT/$MONGODB_DATABASE_TEST?authSource=admin"
         }'

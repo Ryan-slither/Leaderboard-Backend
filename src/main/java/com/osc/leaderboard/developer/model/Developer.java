@@ -1,8 +1,5 @@
 package com.osc.leaderboard.developer.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -16,21 +13,13 @@ public class Developer {
 
     private String avatarUrl;
 
-    // One to Many for Pull Requests
-    private List<String> pullRequestIds = new ArrayList<>();
-
-    // Many to Many for Repos
-    private List<String> repoIds = new ArrayList<>();
-
     public Developer() {
     }
 
-    public Developer(String id, String username, String avatarUrl, List<String> pullRequestIds, List<String> repoIds) {
+    public Developer(String id, String username, String avatarUrl) {
         this.id = id;
         this.username = username;
         this.avatarUrl = avatarUrl;
-        this.pullRequestIds = pullRequestIds;
-        this.repoIds = repoIds;
     }
 
     public String getId() {
@@ -57,26 +46,9 @@ public class Developer {
         this.avatarUrl = avatarUrl;
     }
 
-    public List<String> getPullRequestIds() {
-        return pullRequestIds;
-    }
-
-    public void setPullRequestIds(List<String> pullRequestIds) {
-        this.pullRequestIds = pullRequestIds;
-    }
-
-    public List<String> getRepoIds() {
-        return repoIds;
-    }
-
-    public void setRepoIds(List<String> repoIds) {
-        this.repoIds = repoIds;
-    }
-
     @Override
     public String toString() {
-        return "Developer [id=" + id + ", username=" + username + ", avatarUrl=" + avatarUrl + ", pullRequestIds="
-                + pullRequestIds + ", repoIds=" + repoIds + "]";
+        return "Developer [id=" + id + ", username=" + username + ", avatarUrl=" + avatarUrl + "]";
     }
 
 }

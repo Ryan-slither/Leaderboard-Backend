@@ -3,6 +3,8 @@ package com.osc.leaderboard.fetch.model;
 import java.time.Instant;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.IndexDirection;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 // Represents details for a search query of the Github API
@@ -12,6 +14,7 @@ public class Fetch {
     @Id
     private String id;
 
+    @Indexed(direction = IndexDirection.DESCENDING)
     private Instant fetchedAt;
 
     // Total new pull requests since last fetch
