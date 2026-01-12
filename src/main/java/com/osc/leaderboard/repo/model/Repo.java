@@ -1,8 +1,7 @@
 package com.osc.leaderboard.repo.model;
 
-import java.util.List;
-
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "repos")
@@ -11,12 +10,13 @@ public class Repo {
     @Id
     private String id;
 
+    @Indexed(unique = true)
     private String name;
 
     public Repo() {
     }
 
-    public Repo(String id, String name, List<String> pullRequestIds, List<String> developerIds) {
+    public Repo(String id, String name) {
         this.id = id;
         this.name = name;
     }

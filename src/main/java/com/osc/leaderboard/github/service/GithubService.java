@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.osc.leaderboard.fetch.model.Fetch;
 import com.osc.leaderboard.github.dtos.PullRequestResultDTO;
 import com.osc.leaderboard.github.dtos.PullRequestSearchDTO;
+import com.osc.leaderboard.repo.dtos.RepoDTO;
+import com.osc.leaderboard.repo.service.RepoService;
 
 @Service
 public class GithubService {
@@ -32,9 +34,12 @@ public class GithubService {
 
     private final Environment env;
 
-    public GithubService(ObjectMapper objectMapper, Environment env) {
+    private final RepoService repoService;
+
+    public GithubService(ObjectMapper objectMapper, Environment env, RepoService repoService) {
         this.objectMapper = objectMapper;
         this.env = env;
+        this.repoService = repoService;
     }
 
     private JsonNode mockPullRequestSearchRequest(Integer page, Instant earliestDate, Optional<Fetch> laterThan)
@@ -88,9 +93,9 @@ public class GithubService {
     }
 
     private void processPullRequestSearch(PullRequestSearchDTO pullRequestSearchDTO) {
-        Integer totalCount = pullRequestSearchDTO.totalCount();
-
-        // TODO: Call external services to populate database
+        pullRequestSearchDTO.pullRequestResults().forEach(result -> {
+            RepoDTO repoDTO = repoService.createRepo(result.repoName());
+        });
     }
 
     private JsonNode callPullRequestSearchRequest(Integer currPage, Instant earliestDate,
@@ -110,6 +115,7 @@ public class GithubService {
         return currJson;
     }
 
+    // This should be called within the fetch service only
     public Integer fetchPullRequests(Optional<Fetch> laterThan) {
         JsonNode currJson;
         Integer currPage = 1;
@@ -128,6 +134,7 @@ public class GithubService {
                 currJson = callPullRequestSearchRequest(currPage, earliestDate, laterThan);
 
                 pullRequestSearchDTO = processPullRequestSearchJson(currJson);
+                processPullRequestSearch(pullRequestSearchDTO);
                 totalCount = pullRequestSearchDTO.totalCount();
 
                 if (i == 4 && env.getProperty("TARGET") != "prod")
