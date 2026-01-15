@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "pullrequests")
@@ -18,14 +19,19 @@ public class PullRequest {
 
     private ObjectId repoId;
 
+    // Github's identification for a PR
+    @Indexed(unique = true)
+    private String nodeId;
+
     public PullRequest() {
     }
 
-    public PullRequest(String id, Instant mergedAt, ObjectId developerId, ObjectId repoId) {
+    public PullRequest(String id, Instant mergedAt, ObjectId developerId, ObjectId repoId, String nodeId) {
         Id = id;
         this.mergedAt = mergedAt;
         this.developerId = developerId;
         this.repoId = repoId;
+        this.nodeId = nodeId;
     }
 
     public String getId() {
@@ -60,10 +66,18 @@ public class PullRequest {
         this.repoId = repoId;
     }
 
+    public String getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
+
     @Override
     public String toString() {
         return "PullRequest [Id=" + Id + ", mergedAt=" + mergedAt + ", developerId=" + developerId + ", repoId="
-                + repoId + "]";
+                + repoId + ", nodeId=" + nodeId + "]";
     }
 
 }

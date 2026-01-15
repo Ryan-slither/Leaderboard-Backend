@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
@@ -27,9 +28,14 @@ public class PullRequestService {
         this.pullRequestRepository = pullRequestRepository;
     }
 
-    public PullRequestDTO createPullRequest(Instant mergedAt, String developerId, String repoId) {
-        PullRequest pullRequest = new PullRequest(null, mergedAt, new ObjectId(developerId), new ObjectId(repoId));
-        PullRequest pullRequestSaved = pullRequestRepository.save(pullRequest);
+    public PullRequestDTO createPullRequest(Instant mergedAt, String developerId, String repoId, String nodeId) {
+        // TODO: see if you can try save and catch the unique error, might be faster
+        PullRequest pullRequestSaved = pullRequestRepository.findByNodeId(nodeId).orElseGet(() -> {
+            PullRequest pullRequest = new PullRequest(null, mergedAt, new ObjectId(developerId), new ObjectId(repoId),
+                    nodeId);
+            return pullRequestRepository.save(pullRequest);
+        });
+
         return pullRequestToPullRequestDTO(pullRequestSaved);
     }
 
@@ -47,7 +53,8 @@ public class PullRequestService {
                 Aggregation.group(
                         "$reposList").count().as("pullRequestCount"),
                 Aggregation.project(
-                        "pullRequestCount").and("$_id._id").as("repoId").and("$_id.name").as("repoName"));
+                        "pullRequestCount").and("$_id._id").as("repoId").and("$_id.name").as("repoName"),
+                Aggregation.sort(Sort.Direction.DESC, "pullRequestCount"));
         AggregationResults<PullRequestLeaderBoardDTO> results = mongoTemplate.aggregate(aggregation, "pullrequests",
                 PullRequestLeaderBoardDTO.class);
         return results.getMappedResults();
@@ -55,7 +62,7 @@ public class PullRequestService {
 
     public static PullRequestDTO pullRequestToPullRequestDTO(PullRequest pullRequest) {
         return new PullRequestDTO(pullRequest.getId(), pullRequest.getMergedAt(), pullRequest.getDeveloperId(),
-                pullRequest.getRepoId());
+                pullRequest.getRepoId(), pullRequest.getNodeId());
     }
 
 }

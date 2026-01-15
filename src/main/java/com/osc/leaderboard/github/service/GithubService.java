@@ -81,12 +81,12 @@ public class GithubService {
         return json;
     }
 
-    // TODO: FIX TOTAL COUNT ONLY USING LAST FETCH AND FIGURE OUT WHY SOME RESULTS
-    // ARE MISSING
+    // TODO: FIX TOTAL COUNT ONLY USING LAST FETCH AND DEDUPLICATE RESULTS WITH
+    // NODE_ID
     private JsonNode pullRequestSearchRequest(Integer page, Instant earliestDate, Optional<Fetch> laterThan)
             throws RuntimeException {
         String dateString = earliestDate.toString();
-        String dateBoundary = "+closed:";
+        String dateBoundary = "+created:";
         if (laterThan.isPresent()) {
             dateString = laterThan.get().getFetchedAt().toString();
             dateBoundary += ">=";
@@ -138,7 +138,9 @@ public class GithubService {
             Instant mergedAt = Instant.parse(item.get("pull_request").get("merged_at").asText());
             earliestDate = earliestDate.compareTo(mergedAt) > 0 ? mergedAt : earliestDate;
 
-            pullRequestResults.add(new PullRequestResultDTO(username, avatarUrl, repoName, mergedAt));
+            String nodeId = item.get("node_id").asText();
+
+            pullRequestResults.add(new PullRequestResultDTO(username, avatarUrl, repoName, mergedAt, nodeId));
         }
 
         return new PullRequestSearchDTO(totalCount, pullRequestResults, earliestDate);
@@ -148,7 +150,7 @@ public class GithubService {
         pullRequestSearchDTO.pullRequestResults().forEach(result -> {
             RepoDTO repoDTO = repoService.createRepo(result.repoName());
             DeveloperDTO developerDTO = developerService.createDeveloper(result.username(), result.avatarUrl());
-            pullRequestService.createPullRequest(result.mergedAt(), developerDTO.id(), repoDTO.id());
+            pullRequestService.createPullRequest(result.mergedAt(), developerDTO.id(), repoDTO.id(), result.nodeId());
         });
     }
 
@@ -183,12 +185,15 @@ public class GithubService {
 
         if (totalCount > 100) {
             Integer totalPages = (int) Math.ceil(totalCount / 100);
-            for (int i = 2; i < totalPages + 1; ++i) {
+            for (int i = 1; i < totalPages + 1; ++i) {
                 earliestDate = pullRequestSearchDTO.earliestDate();
 
                 currJson = callPullRequestSearchRequest(i, earliestDate, laterThan);
                 pullRequestSearchDTO = processPullRequestSearchJson(currJson);
                 processPullRequestSearch(pullRequestSearchDTO);
+
+                if (pullRequestSearchDTO.pullRequestResults().size() == 0)
+                    break;
 
                 if (i == PULL_REQUEST_SEARCH_PATH.size() && env.getProperty("TARGET") == "test")
                     break;

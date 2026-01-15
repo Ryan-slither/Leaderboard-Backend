@@ -21,7 +21,7 @@ public class PullRequestController {
         this.pullRequestService = pullRequestService;
     }
 
-    @GetMapping
+    @GetMapping("/leaderboard")
     public ResponseEntity<List<PullRequestLeaderBoardDTO>> getPullRequestLeaderboard() {
         return new ResponseEntity<>(pullRequestService.getPullRequestLeaderboard(), HttpStatus.OK);
     }
